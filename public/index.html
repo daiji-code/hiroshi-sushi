@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>魚識別 · Sushi Identifier</title>
+<style>
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0D0D0B;
+    color: #F5EDD8;
+    font-family: 'Georgia', serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-bottom: 60px;
+  }
+  header {
+    width: 100%;
+    max-width: 480px;
+    padding: 36px 20px 0;
+    text-align: center;
+  }
+  .tagline { font-size: 9px; letter-spacing: 7px; color: #2E2E28; text-transform: uppercase; margin-bottom: 10px; }
+  .title { font-size: 30px; font-weight: 300; letter-spacing: 6px; color: #F5EDD8; margin-bottom: 4px; }
+  .subtitle { font-size: 9px; letter-spacing: 5px; color: #3A3A32; text-transform: uppercase; }
+  .divider { width: 100%; height: 1px; background: linear-gradient(to right, transparent, #222218, transparent); margin: 20px 0 0; }
+
+  main { width: 100%; max-width: 480px; padding: 16px 16px 0; display: flex; flex-direction: column; gap: 12px; }
+
+  #drop-zone {
+    border: 1px solid #1E1E1A;
+    padding: 56px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .3s;
+  }
+  #drop-zone:hover { border-color: #C8943A; }
+  #drop-zone .icon { font-size: 36px; margin-bottom: 14px; opacity: .2; }
+  #drop-zone .label { font-size: 14px; color: #4A4A3A; letter-spacing: 1px; margin-bottom: 8px; }
+  #drop-zone .hint { font-size: 9px; color: #2E2E28; letter-spacing: 4px; text-transform: uppercase; }
+
+  #preview-wrap { position: relative; display: none; }
+  #preview-img { width: 100%; display: block; max-height: 300px; object-fit: cover; }
+  #clear-btn {
+    position: absolute; top: 10px; right: 10px;
+    background: rgba(13,13,11,.85); border: 1px solid #2A2A22;
+    color: #5A5A52; width: 26px; height: 26px; border-radius: 50%;
+    cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center;
+  }
+
+  #identify-btn {
+    display: none;
+    width: 100%; padding: 16px;
+    background: linear-gradient(135deg, #C8943A, #9A6E28);
+    border: none; color: #0D0D0B;
+    font-size: 10px; letter-spacing: 6px; text-transform: uppercase;
+    cursor: pointer; font-family: 'Georgia', serif; font-weight: 700;
+  }
+
+  #loading { display: none; padding: 28px 0; text-align: center; }
+  .dots { display: flex; gap: 5px; justify-content: center; margin-bottom: 14px; }
+  .dot {
+    width: 4px; height: 4px; border-radius: 50%; background: #C8943A;
+    animation: dp 1.4s ease infinite;
+  }
+  .dot:nth-child(2) { animation-delay: .16s; }
+  .dot:nth-child(3) { animation-delay: .32s; }
+  @keyframes dp { 0%,80%,100%{transform:scale(.6);opacity:.3} 40%{transform:scale(1);opacity:1} }
+  #loading-msg { font-size: 11px; color: #4A4A3A; letter-spacing: 2px; font-style: italic; }
+
+  #result { display: none; flex-direction: column; gap: 10px; }
+
+  .card { background: #111110; border: 1px solid #1E1E1A; padding: 20px 18px; }
+  .card-label { font-size: 8px; letter-spacing: 4px; color: #2E2E28; text-transform: uppercase; margin-bottom: 10px; }
+
+  .hero { text-align: center; padding: 26px 18px 20px; }
+  .jp-name { font-size: 36px; font-weight: 300; letter-spacing: 4px; color: #F5EDD8; margin-bottom: 3px; line-height: 1.3; }
+  .en-name { font-size: 13px; color: #6A6A5A; letter-spacing: 2px; margin-bottom: 18px; }
+  .tags { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+  .tag { font-size: 8px; letter-spacing: 3px; padding: 4px 10px; border: 1px solid #C8943A; color: #C8943A; text-transform: uppercase; }
+  .tag.plain { border-color: #222218; color: #3A3A32; }
+  .conf-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
+  .conf-label { font-size: 8px; letter-spacing: 3px; color: #2E2E28; text-transform: uppercase; }
+  .conf-pct { font-size: 10px; font-family: monospace; }
+  .conf-track { height: 1px; background: #1A1A16; }
+  .conf-fill { height: 1px; transition: width 1.2s cubic-bezier(.16,1,.3,1); }
+
+  .analysis-text { font-size: 12px; color: #7A7A68; line-height: 1.8; font-style: italic; font-weight: 300; }
+
+  .toppings-row { display: flex; gap: 20px; }
+  .toppings-col { flex: 1; }
+  .toppings-text { font-size: 12px; color: #C8B890; line-height: 1.7; }
+
+  .cand-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid #161612; }
+  .cand-name { flex: 1; font-size: 12px; }
+  .cand-track { width: 60px; height: 1px; background: #1A1A16; }
+  .cand-fill { height: 1px; }
+  .cand-pct { width: 26px; text-align: right; font-size: 10px; font-family: monospace; }
+
+
+  #reset-btn {
+    background: transparent; border: 1px solid #1E1E1A; color: #2E2E28;
+    padding: 14px; font-size: 9px; letter-spacing: 5px; text-transform: uppercase;
+    cursor: pointer; font-family: 'Georgia', serif; transition: all .2s; width: 100%; margin-top: 4px;
+  }
+  #reset-btn:hover { border-color: #C8943A; color: #C8943A; }
+
+  #error-box { display: none; padding: 12px 14px; border: 1px solid #3A1A1A; color: #B07070; font-size: 11px; line-height: 1.6; font-family: monospace; white-space: pre-wrap; word-break: break-all; }
+
+</style>
+</head>
+<body>
+
+<header>
+  <div class="tagline">Hiroshi · San Francisco</div>
+  <div class="title">魚識別</div>
+  <div class="subtitle">Sushi Identifier</div>
+  <div class="divider"></div>
+</header>
+
+<main>
+  <div id="drop-zone" onclick="document.getElementById('file-input').click()">
+    <div class="icon">🍣</div>
+    <div class="label">Photograph your plate</div>
+    <div class="hint">Camera · Photo Library · Drop</div>
+  </div>
+  <input id="file-input" type="file" accept="image/*" style="display:none" onchange="handleFile(event)">
+
+  <div id="preview-wrap">
+    <img id="preview-img" src="" alt="sushi">
+    <button id="clear-btn" onclick="reset()">×</button>
+  </div>
+
+  <button id="identify-btn" onclick="identify()">Identify</button>
+
+  <div id="loading">
+    <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    <div id="loading-msg">Reading the flesh…</div>
+  </div>
+
+  <div id="error-box"></div>
+
+  <div id="result">
+    <div class="card hero">
+      <div class="jp-name" id="jp-name"></div>
+      <div class="en-name" id="en-name"></div>
+      <div class="tags" id="tags"></div>
+      <div class="conf-row">
+        <span class="conf-label">Confidence</span>
+        <span class="conf-pct" id="conf-pct"></span>
+      </div>
+      <div class="conf-track"><div class="conf-fill" id="conf-fill"></div></div>
+    </div>
+
+    <div id="correction-bar" style="display:none;padding:12px 0 4px;">
+      <div id="correction-trigger" onclick="toggleCorrection()" style="font-size:9px;letter-spacing:3px;color:#7A7A68;text-transform:uppercase;cursor:pointer;text-align:center;padding:10px;border:1px solid #2A2A22;background:#111110;">
+        Incorrect? ▾
+      </div>
+      <div id="correction-panel" style="display:none;padding:12px 0 6px;">
+        <div style="font-size:9px;letter-spacing:3px;color:#7A7A68;text-transform:uppercase;margin-bottom:10px;text-align:center;">This is actually:</div>
+        <select id="correction-select" style="width:100%;background:#111110;border:1px solid #1E1E1A;color:#F5EDD8;padding:10px;font-family:Georgia,serif;font-size:12px;letter-spacing:1px;margin-bottom:8px;">
+          <option value="">— select species —</option>
+        </select>
+        <button onclick="saveCorrection()" style="width:100%;padding:12px;background:transparent;border:1px solid #C8943A;color:#C8943A;font-size:9px;letter-spacing:4px;text-transform:uppercase;cursor:pointer;font-family:Georgia,serif;">
+          Add as Example
+        </button>
+        <div id="correction-confirm" style="display:none;text-align:center;font-size:10px;color:#7AB87A;letter-spacing:2px;margin-top:10px;font-style:italic;"></div>
+      </div>
+    </div>
+
+    <div class="card" id="analysis-card">
+      <div class="card-label">Visual Analysis</div>
+      <div class="analysis-text" id="analysis-text"></div>
+    </div>
+
+    <div class="card" id="toppings-card" style="display:none">
+      <div class="toppings-row" id="toppings-row"></div>
+    </div>
+
+    <div class="card" id="candidates-card">
+      <div class="card-label">All Candidates</div>
+      <div id="candidates-list"></div>
+    </div>
+
+
+    <button id="reset-btn" onclick="reset()">Scan Another Piece</button>
+  <button id="export-btn" onclick="exportCorrections()" style="background:transparent;border:1px solid #1E1E1A;color:#2E2E28;padding:14px;font-size:9px;letter-spacing:5px;text-transform:uppercase;cursor:pointer;font-family:Georgia,serif;transition:all .2s;width:100%;margin-top:4px;" onmouseover="this.style.borderColor='#7A7A68';this.style.color='#7A7A68'" onmouseout="this.style.borderColor='#1E1E1A';this.style.color='#2E2E28'">Export Corrections</button>
+  </div>
+</main>
+
+<script>
+const MODEL = 'claude-sonnet-4-20250514';
+
+const SPECIES_LIST = ["Akami","Chutoro","Otoro","Katsuo","Ebodai","Hamachi","Kanpachi","Kinmedai","Kasugodai","Kohada","Anago","Iwashi","Shima-aji","Sawara","Nodoguro","Tai","Shimesaba","Sayori","Aji","Uni","Amaebi","Ikura","Ika"];
+
+const JP_NAMES = {
+  "Akami":"赤身","Chutoro":"中トロ","Otoro":"大トロ","Katsuo":"鰹",
+  "Ebodai":"えぼ鯛","Hamachi":"ハマチ","Kanpachi":"カンパチ","Kinmedai":"金目鯛",
+  "Kasugodai":"春子鯛","Kohada":"小鰭","Anago":"穴子","Iwashi":"鰯",
+  "Shima-aji":"縞鯵","Sawara":"鰆","Nodoguro":"のどぐろ","Tai":"鯛",
+  "Shimesaba":"〆鯖","Sayori":"針魚","Aji":"鯵","Uni":"雲丹",
+  "Amaebi":"甘海老","Ikura":"イクラ","Ika":"烏賊"
+};
+
+const EN_NAMES = {
+  "Akami":"Lean Tuna","Chutoro":"Medium Fatty Tuna","Otoro":"Fatty Tuna",
+  "Katsuo":"Bonito","Ebodai":"Butterfish","Hamachi":"Yellowtail",
+  "Kanpachi":"Amberjack","Kinmedai":"Golden Eye Snapper","Kasugodai":"Young Sea Bream",
+  "Kohada":"Gizzard Shad","Anago":"Sea Eel","Iwashi":"Sardine",
+  "Shima-aji":"Striped Jack","Sawara":"Spanish Mackerel","Nodoguro":"Blackthroat Seaperch",
+  "Tai":"Sea Bream","Shimesaba":"Vinegared Mackerel","Sayori":"Halfbeak",
+  "Aji":"Horse Mackerel","Uni":"Sea Urchin","Amaebi":"Sweet Shrimp",
+  "Ikura":"Salmon Roe","Ika":"Squid"
+};
+
+const RARITY = {
+  otoro:"premium",chutoro:"premium",kinmedai:"rare",nodoguro:"rare",
+  "shima-aji":"rare",kasugodai:"rare",uni:"premium",amaebi:"premium",ikura:"premium",
+  hamachi:"common",kanpachi:"common",akami:"common",tai:"common",
+  anago:"common",iwashi:"seasonal",kohada:"seasonal",sawara:"seasonal",
+  shimesaba:"seasonal",sayori:"seasonal",katsuo:"seasonal",ebodai:"seasonal",
+  aji:"seasonal",ika:"seasonal"
+};
+function getRarity(n){const l=n.toLowerCase();for(const[k,v]of Object.entries(RARITY))if(l.includes(k))return v;return"seasonal";}
+const RS={common:{c:"#7AB87A",l:"Common"},seasonal:{c:"#C8943A",l:"Seasonal"},rare:{c:"#9B7FC2",l:"Rare"},premium:{c:"#C8943A",l:"Premium"}};
+
+// Debug mode via ?debug=true
+const DEBUG = new URLSearchParams(window.location.search).get('debug') === 'true';
+
+let b64 = null;
+let refCache = {};
+
+function compressImage(file){
+  return new Promise(resolve=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const img=new Image();
+      img.onload=()=>{
+        const MAX=600;let w=img.width,h=img.height;
+        if(w>MAX||h>MAX){if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;}}
+        const c=document.createElement("canvas");c.width=w;c.height=h;
+        c.getContext("2d").drawImage(img,0,0,w,h);
+        const dataUrl=c.toDataURL("image/jpeg",0.75);
+        resolve({dataUrl,b64:dataUrl.split(",")[1]});
+      };
+      img.src=e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleFile(e){
+  const file=e.target.files[0];if(!file)return;
+  const{dataUrl,b64:compressed}=await compressImage(file);
+  b64=compressed;
+  document.getElementById("preview-img").src=dataUrl;
+  document.getElementById("drop-zone").style.display="none";
+  document.getElementById("preview-wrap").style.display="block";
+  document.getElementById("identify-btn").style.display="block";
+  document.getElementById("result").style.display="none";
+  document.getElementById("error-box").style.display="none";
+}
+
+async function fetchRefs(species){
+  if(refCache[species]) return refCache[species];
+  const res = await fetch(`/api/refs/${encodeURIComponent(species)}`);
+  const refs = await res.json();
+  refCache[species] = refs;
+  return refs;
+}
+
+async function identify(){
+  if(!b64)return;
+  document.getElementById("identify-btn").style.display="none";
+  document.getElementById("clear-btn").style.display="none";
+  document.getElementById("loading").style.display="block";
+  document.getElementById("result").style.display="none";
+  document.getElementById("error-box").style.display="none";
+
+  const msgs=["Reading the fish…","Finding candidates…","Comparing references…","Reaching a verdict…"];
+  let mi=0;
+  document.getElementById("loading-msg").textContent=msgs[0];
+  const timer=setInterval(()=>{mi=(mi+1)%msgs.length;document.getElementById("loading-msg").textContent=msgs[mi];},1800);
+
+  try{
+    // Stage 1
+    const s1res = await fetch('/api/identify/stage1',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({image:b64,speciesList:SPECIES_LIST})
+    });
+    const stage1 = await s1res.json();
+    if(stage1.error) throw new Error(stage1.error);
+
+    if(stage1.outOfLibrary){
+      showOutOfLibrary(stage1);
+      return;
+    }
+
+    const candidates = (stage1.candidates||[]).slice(0,3);
+    if(!candidates.length) throw new Error("No candidates from stage 1");
+
+    // Fetch reference images for candidates
+    const refs = {};
+    await Promise.all(candidates.map(async c=>{
+      const userRefs = getUserExamples()[c]||[];
+      const serverRefs = await fetchRefs(c);
+      refs[c] = [...serverRefs, ...userRefs].slice(0,12);
+    }));
+
+    // Stage 2
+    const s2res = await fetch('/api/identify/stage2',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({image:b64,candidates,refs})
+    });
+    const stage2 = await s2res.json();
+    if(stage2.error) throw new Error(stage2.error);
+    showResult(stage2, candidates);
+
+  }catch(e){
+    showError(e.message||String(e));
+  }finally{
+    clearInterval(timer);
+    document.getElementById("loading").style.display="none";
+    document.getElementById("clear-btn").style.display="flex";
+  }
+}
+
+function showResult(d, candidates){
+  const enName=d.finalIdentification?.en||candidates[0]||"Unknown";
+  const jpName=JP_NAMES[enName]||enName;
+  const enFull=EN_NAMES[enName]||enName;
+  const conf=d.finalIdentification?.confidence||0;
+  const pct=Math.round(conf*100);
+  const rarity=getRarity(enName);
+  const rs=RS[rarity];
+  const col=pct>=80?"#7AB87A":pct>=60?"#C8943A":"#CD853F";
+
+  document.getElementById("jp-name").textContent=jpName;
+  document.getElementById("en-name").textContent=enFull;
+  document.getElementById("conf-pct").textContent=pct+"%";
+  document.getElementById("conf-pct").style.color=col;
+  document.getElementById("conf-fill").style.width=pct+"%";
+  document.getElementById("conf-fill").style.background=col;
+
+  const tags=document.getElementById("tags");
+  tags.innerHTML=`<span class="tag">${rs.l}</span>`;
+  if(d.toppings&&d.toppings!=="None")tags.innerHTML+=`<span class="tag plain">Toppings</span>`;
+
+  document.getElementById("analysis-text").textContent=d.analysis||"";
+  document.getElementById("analysis-card").style.display=d.analysis?"block":"none";
+
+  const showTop=d.toppings&&d.toppings!=="None";
+  const showGar=d.garnish&&d.garnish!=="None";
+  if(showTop||showGar){
+    let h="";
+    if(showTop)h+=`<div class="toppings-col"><div class="card-label">Toppings</div><div class="toppings-text">${d.toppings}</div></div>`;
+    if(showGar)h+=`<div class="toppings-col"><div class="card-label">Garnish</div><div class="toppings-text">${d.garnish}</div></div>`;
+    document.getElementById("toppings-row").innerHTML=h;
+    document.getElementById("toppings-card").style.display="block";
+  }else{document.getElementById("toppings-card").style.display="none";}
+
+  const cands=Object.entries(d.candidates||{}).sort((a,b)=>b[1]-a[1]);
+  document.getElementById("candidates-list").innerHTML=cands.map(([name,score],i)=>{
+    const p=Math.round(score*100),isTop=i===0;
+    return`<div class="cand-row">
+      <div class="cand-name" style="color:${isTop?"#F5EDD8":"#4A4A3A"}">${name}</div>
+      <div class="cand-track"><div class="cand-fill" style="width:${p}%;background:${isTop?"#C8943A":"#262620"}"></div></div>
+      <div class="cand-pct" style="color:${isTop?"#C8943A":"#2E2E28"}">${p}</div>
+    </div>`;
+  }).join("");
+
+  document.getElementById("result").style.display="flex";
+  if(DEBUG){
+    document.getElementById("correction-bar").style.display="block";
+    document.getElementById("correction-panel").style.display="none";
+    document.getElementById("correction-trigger").textContent="Incorrect? ▾";
+    document.getElementById("export-btn").style.display="block";
+  }
+}
+
+function showOutOfLibrary(data){
+  document.getElementById("loading").style.display="none";
+  document.getElementById("clear-btn").style.display="flex";
+  const jp=data.jp||data.what||"?";
+  const en=data.en||data.what||"Unknown";
+  document.getElementById("jp-name").textContent=jp;
+  document.getElementById("en-name").textContent=en;
+  document.getElementById("conf-pct").textContent="—";
+  document.getElementById("conf-pct").style.color="#2E2E28";
+  document.getElementById("conf-fill").style.width="0%";
+  document.getElementById("tags").innerHTML='<span class="tag plain">Not in library</span>';
+  document.getElementById("analysis-text").textContent="Identified as "+en+". Not currently in the reference library.";
+  document.getElementById("analysis-card").style.display="block";
+  document.getElementById("toppings-card").style.display="none";
+  document.getElementById("candidates-list").innerHTML='<div style="font-size:11px;color:#2E2E28;padding:8px 0;font-style:italic;">Not in reference library</div>';
+  document.getElementById("result").style.display="flex";
+  if(DEBUG){
+    document.getElementById("correction-bar").style.display="block";
+    document.getElementById("correction-panel").style.display="none";
+    document.getElementById("correction-trigger").textContent="Wrong? Assign to a species ▾";
+    document.getElementById("export-btn").style.display="block";
+  }
+}
+
+// --- User corrections via localStorage ---
+function getUserExamples(){
+  try{return JSON.parse(localStorage.getItem('sushi_corrections')||'{}');}
+  catch{return {};}
+}
+function saveUserExample(species,photoB64){
+  const corrections=getUserExamples();
+  if(!corrections[species])corrections[species]=[];
+  if(corrections[species].length>=5)return false;
+  corrections[species].push(photoB64);
+  localStorage.setItem('sushi_corrections',JSON.stringify(corrections));
+  return true;
+}
+function populateCorrectionSelect(){
+  const sel=document.getElementById('correction-select');
+  sel.innerHTML='<option value="">— select species —</option>';
+  SPECIES_LIST.forEach(sp=>{
+    const userCount=(getUserExamples()[sp]||[]).length;
+    const label=JP_NAMES[sp]+" ("+sp+")"+(userCount>0?" +"+userCount:"");
+    sel.innerHTML+=`<option value="${sp}">${label}</option>`;
+  });
+}
+function toggleCorrection(){
+  const panel=document.getElementById('correction-panel');
+  const trigger=document.getElementById('correction-trigger');
+  const isOpen=panel.style.display!=='none';
+  panel.style.display=isOpen?'none':'block';
+  trigger.textContent=isOpen?'Incorrect? ▾':'Incorrect? ▴';
+  if(!isOpen){populateCorrectionSelect();document.getElementById('correction-confirm').style.display='none';}
+}
+function saveCorrection(){
+  const species=document.getElementById('correction-select').value;
+  if(!species)return;
+  if(!b64){document.getElementById('correction-confirm').textContent='No photo in memory.';document.getElementById('correction-confirm').style.display='block';return;}
+  const saved=saveUserExample(species,b64);
+  const confirm=document.getElementById('correction-confirm');
+  const count=(getUserExamples()[species]||[]).length;
+  if(saved){confirm.textContent='✓ Added to '+JP_NAMES[species]+' — '+count+' user example'+(count>1?'s':'');confirm.style.color='#7AB87A';}
+  else{confirm.textContent='Max 5 user examples reached for '+species;confirm.style.color='#C8943A';}
+  confirm.style.display='block';
+  populateCorrectionSelect();
+}
+function exportCorrections(){
+  const corrections=getUserExamples();
+  const count=Object.values(corrections).reduce((s,a)=>s+a.length,0);
+  if(count===0){alert("No corrections saved yet.");return;}
+  const blob=new Blob([JSON.stringify(corrections,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");a.href=url;
+  a.download="sushi_corrections_"+new Date().toISOString().slice(0,10)+".json";
+  a.click();URL.revokeObjectURL(url);
+}
+
+function showError(msg){
+  const b=document.getElementById("error-box");
+  b.textContent=msg;b.style.display="block";
+  document.getElementById("identify-btn").style.display="block";
+}
+
+function reset(){
+  b64=null;
+  document.getElementById("file-input").value="";
+  document.getElementById("drop-zone").style.display="block";
+  document.getElementById("preview-wrap").style.display="none";
+  document.getElementById("identify-btn").style.display="none";
+  document.getElementById("result").style.display="none";
+  document.getElementById("error-box").style.display="none";
+  document.getElementById("loading").style.display="none";
+  document.getElementById("correction-bar").style.display="none";
+  document.getElementById("export-btn").style.display="none";
+}
+
+const dz=document.getElementById("drop-zone");
+dz.addEventListener("dragover",e=>{e.preventDefault();dz.style.borderColor="#C8943A";});
+dz.addEventListener("dragleave",()=>{dz.style.borderColor="#1E1E1A";});
+dz.addEventListener("drop",async e=>{
+  e.preventDefault();dz.style.borderColor="#1E1E1A";
+  const file=e.dataTransfer.files[0];if(!file)return;
+  const{dataUrl,b64:compressed}=await compressImage(file);
+  b64=compressed;
+  document.getElementById("preview-img").src=dataUrl;
+  document.getElementById("drop-zone").style.display="none";
+  document.getElementById("preview-wrap").style.display="block";
+  document.getElementById("identify-btn").style.display="block";
+});
+
+// Hide debug UI on load if not in debug mode
+window.addEventListener('DOMContentLoaded',()=>{
+  if(!DEBUG){
+    document.getElementById('correction-bar').style.display='none';
+    document.getElementById('export-btn').style.display='none';
+  }
+});
+</script>
+</body>
+</html>
