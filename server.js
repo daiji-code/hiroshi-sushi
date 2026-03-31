@@ -25,9 +25,11 @@ app.get('/api/refs/:species', (req, res) => {
   const dir = path.join(__dirname, 'public', 'references', species);
   if (!fs.existsSync(dir)) return res.json([]);
 
+  const limit = parseInt(req.query.limit) || 6;
   const files = fs.readdirSync(dir)
     .filter(f => f.endsWith('.jpg'))
-    .sort((a, b) => parseInt(a) - parseInt(b));
+    .sort((a, b) => parseInt(a) - parseInt(b))
+    .slice(0, limit);
 
   const refs = files.map(fn => {
     const data = fs.readFileSync(path.join(dir, fn));

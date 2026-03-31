@@ -266,7 +266,7 @@ async function handleFile(e){
 
 async function fetchRefs(species){
   if(refCache[species]) return refCache[species];
-  const res = await fetch(`/api/refs/${encodeURIComponent(species)}`);
+  const res = await fetch(`/api/refs/${encodeURIComponent(species)}?limit=6`);
   const refs = await res.json();
   refCache[species] = refs;
   return refs;
@@ -308,7 +308,7 @@ async function identify(){
     await Promise.all(candidates.map(async c=>{
       const userRefs = getUserExamples()[c]||[];
       const serverRefs = await fetchRefs(c);
-      refs[c] = [...serverRefs, ...userRefs].slice(0,12);
+      refs[c] = [...serverRefs, ...userRefs].slice(0,6);
     }));
 
     // Stage 2
